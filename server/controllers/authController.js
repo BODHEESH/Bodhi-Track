@@ -17,44 +17,44 @@ const generateToken = (userId) => {
 exports.login = async (req, res) => {
   try {
     console.log('Login attempt with body:', req.body);
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!username || !password) {
-      console.log('Missing username or password');
+    if (!email || !password) {
+      console.log('Missing email or password');
       return res.status(400).json({
         success: false,
-        message: 'Please provide username and password'
+        message: 'Please provide email and password'
       });
     }
 
     // Find user
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ email }).select('+password');
     console.log('User found in database:', user ? 'Yes' : 'No');
 
     if (!user) {
-      console.log('No user found with username:', username);
+      console.log('No user found with email:', email);
       return res.status(401).json({
         success: false,
-        message: 'Invalid username or password'
+        message: 'Invalid email or password'
       });
     }
 
     // Check password
     console.log('Comparing passwords...');
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await user.matchPassword(password);
     console.log('Password valid:', isPasswordValid);
 
     if (!isPasswordValid) {
-      console.log('Invalid password for user:', username);
+      console.log('Invalid password for user:', email);
       return res.status(401).json({
         success: false,
-        message: 'Invalid username or password'
+        message: 'Invalid email or password'
       });
     }
 
     // Generate token
     const token = generateToken(user._id);
-    console.log('Login successful for user:', username);
+    console.log('Login successful for user:', email);
 
     res.json({
       success: true,

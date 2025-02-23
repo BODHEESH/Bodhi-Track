@@ -362,25 +362,150 @@ exports.getRecentActivity = async (req, res) => {
 // Get upcoming tasks
 exports.getUpcomingTasks = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const tasks = await Task.find({
-      userId,
-      deadline: { $gte: new Date() }
-    })
-    .sort({ deadline: 1 })
-    .limit(5)
-    .lean();
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
 
     res.json({
       success: true,
-      data: tasks
+      tasks: user.upcomingTasks.sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
     });
   } catch (error) {
-    console.error('Error getting upcoming tasks:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error getting upcoming tasks'
+    console.error('Error fetching upcoming tasks:', error);
+    res.status(500).json({ success: false, message: 'Error fetching upcoming tasks' });
+  }
+};
+
+// Add new task
+exports.addTask = async (req, res) => {
+  try {
+    const { title, deadline, type, priority, subtasks } = req.body;
+    
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const newTask = {
+      title,
+      deadline: new Date(deadline),
+      type,
+      priority,
+      subtasks: subtasks || []
+    };
+
+    user.upcomingTasks.push(newTask);
+    await user.save();
+
+    res.json({
+      success: true,
+      task: newTask,
+      message: 'Task added successfully'
     });
+  } catch (error) {
+    console.error('Error adding task:', error);
+    res.status(500).json({ success: false, message: 'Error adding task' });
+  }
+};
+
+// Update task
+exports.updateTask = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { title, deadline, type, priority, subtasks } = req.body;
+    
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const taskIndex = user.upcomingTasks.findIndex(task => task._id.toString() === taskId);
+    if (taskIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    user.upcomingTasks[taskIndex] = {
+      ...user.upcomingTasks[taskIndex],
+      title: title || user.upcomingTasks[taskIndex].title,
+      deadline: deadline ? new Date(deadline) : user.upcomingTasks[taskIndex].deadline,
+      type: type || user.upcomingTasks[taskIndex].type,
+      priority: priority || user.upcomingTasks[taskIndex].priority,
+      subtasks: subtasks || user.upcomingTasks[taskIndex].subtasks
+    };
+
+    await user.save();
+
+    res.json({
+      success: true,
+      task: user.upcomingTasks[taskIndex],
+      message: 'Task updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating task:', error);
+    res.status(500).json({ success: false, message: 'Error updating task' });
+  }
+};
+
+// Delete task
+exports.deleteTask = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const taskIndex = user.upcomingTasks.findIndex(task => task._id.toString() === taskId);
+    if (taskIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    user.upcomingTasks.splice(taskIndex, 1);
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Task deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting task:', error);
+    res.status(500).json({ success: false, message: 'Error deleting task' });
+  }
+};
+
+// Toggle subtask completion
+exports.toggleSubtask = async (req, res) => {
+  try {
+    const { taskId, subtaskId } = req.params;
+    
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const task = user.upcomingTasks.id(taskId);
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    const subtask = task.subtasks.id(subtaskId);
+    if (!subtask) {
+      return res.status(404).json({ success: false, message: 'Subtask not found' });
+    }
+
+    subtask.completed = !subtask.completed;
+    await user.save();
+
+    res.json({
+      success: true,
+      task,
+      message: 'Subtask toggled successfully'
+    });
+  } catch (error) {
+    console.error('Error toggling subtask:', error);
+    res.status(500).json({ success: false, message: 'Error toggling subtask' });
   }
 };
 
@@ -447,79 +572,6 @@ exports.getLearningProgress = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error getting learning progress'
-    });
-  }
-};
-
-// Add new task
-exports.addTask = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { title, type, priority, deadline, subtasks } = req.body;
-
-    const task = new Task({
-      userId,
-      title,
-      type,
-      priority,
-      deadline: new Date(deadline),
-      subtasks: subtasks.map(st => ({
-        name: st.name,
-        completed: false
-      }))
-    });
-
-    await task.save();
-
-    res.json({
-      success: true,
-      data: task
-    });
-  } catch (error) {
-    console.error('Error adding task:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error adding task'
-    });
-  }
-};
-
-// Update subtask status
-exports.updateSubtaskStatus = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { taskId, subtaskId } = req.params;
-    const { completed } = req.body;
-
-    const task = await Task.findOne({ _id: taskId, userId });
-    
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: 'Task not found'
-      });
-    }
-
-    const subtask = task.subtasks.id(subtaskId);
-    if (!subtask) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subtask not found'
-      });
-    }
-
-    subtask.completed = completed;
-    await task.save();
-
-    res.json({
-      success: true,
-      data: task
-    });
-  } catch (error) {
-    console.error('Error updating subtask status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating subtask status'
     });
   }
 };
@@ -740,3 +792,58 @@ exports.updateTargets = async (req, res) => {
     });
   }
 };
+
+// Update subtask status
+exports.updateSubtaskStatus = async (req, res) => {
+  try {
+    const { taskId, subtaskId } = req.params;
+    const { completed } = req.body;
+
+    const task = await Task.findById(taskId);
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: 'Task not found'
+      });
+    }
+
+    // Find the subtask and update its status
+    const subtask = task.subtasks.id(subtaskId);
+    if (!subtask) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subtask not found'
+      });
+    }
+
+    subtask.completed = completed;
+    await task.save();
+
+    // Add activity
+    await Activity.create({
+      userId: req.user.id,
+      type: 'task',
+      action: completed ? 'completed subtask' : 'uncompleted subtask',
+      description: `${completed ? 'Completed' : 'Uncompleted'} subtask: ${subtask.title}`,
+      reference: {
+        taskId: task._id,
+        subtaskId: subtask._id
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: task
+    });
+  } catch (error) {
+    console.error('Error updating subtask status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating subtask status',
+      error: error.message
+    });
+  }
+};
+
+module.exports = exports;

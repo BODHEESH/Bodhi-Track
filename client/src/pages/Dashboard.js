@@ -12,6 +12,8 @@ import {
   ClockIcon,
   SunIcon,
   MoonIcon,
+  PencilIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 
 const CircularProgress = ({ value, total }) => {
@@ -115,6 +117,16 @@ const Dashboard = () => {
   });
   const [toastMessage, setToastMessage] = useState(null);
 
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [taskForm, setTaskForm] = useState({
+    title: '',
+    deadline: '',
+    type: 'dsa',
+    priority: 'medium',
+    subtasks: []
+  });
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -190,81 +202,147 @@ const Dashboard = () => {
       setStats(newStats);
     }
 
-    // // Fetch achievements
-    // const achievementsData = await fetchData('http://localhost:5000/api/dashboard/achievements', 'achievements');
-    // if (achievementsData) {
-    //   setAchievements(achievementsData);
-    // }
-
-    // // Fetch recent activity
-    // const activityData = await fetchData('http://localhost:5000/api/dashboard/recent-activity', 'activity');
-    // if (activityData) {
-    //   setRecentActivity(activityData);
-    // }
-
-    // // Fetch upcoming tasks
-    // const tasksData = await fetchData('http://localhost:5000/api/dashboard/upcoming-tasks', 'tasks');
-    // if (tasksData) {
-    //   setUpcomingTasks(tasksData);
-    // }
-
-    // // Fetch learning progress
-    // const progressData = await fetchData('http://localhost:5000/api/dashboard/learning-progress', 'progress');
-    // if (progressData) {
-    //   setLearningProgress(progressData);
-    // }
+    // Fetch upcoming tasks
+    const tasksData = await fetchData('http://localhost:5000/api/dashboard/upcoming-tasks', 'tasks');
+    if (tasksData) {
+      setUpcomingTasks(tasksData);
+    }
 
     setLoading(false);
   };
 
-  const handleAddTask = async (taskData) => {
+  const fetchUpcomingTasks = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:5000/api/dashboard/tasks', taskData, {
+      const response = await axios.get('/api/dashboard/tasks', {
         headers: { Authorization: `Bearer ${token}` }
       });
-
       if (response.data.success) {
-        setShowToast(true);
-        setToastMessage({ type: 'success', text: 'Task added successfully!' });
-        setShowModal(false);
-        // Only refresh tasks section instead of all data
-        const tasksData = await axios.get('http://localhost:5000/api/dashboard/upcoming-tasks', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (tasksData.data.success) {
-          setUpcomingTasks(tasksData.data.data);
-        }
+        setUpcomingTasks(response.data.tasks);
       }
     } catch (error) {
-      console.error('Error adding task:', error);
-      setShowToast(true);
-      setToastMessage({ type: 'error', text: 'Failed to add task. Please try again.' });
+      console.error('Error fetching upcoming tasks:', error);
+      setSectionErrors(prev => ({ ...prev, tasks: true }));
     }
   };
 
-  const handleToggleSubtask = async (taskId, subtaskId, completed) => {
+  const handleAddTask = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(
-        `http://localhost:5000/api/dashboard/tasks/${taskId}/subtasks/${subtaskId}`,
-        { completed },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      // Only refresh tasks section instead of all data
-      const tasksData = await axios.get('http://localhost:5000/api/dashboard/upcoming-tasks', {
+      const response = await axios.post('/api/dashboard/tasks', taskForm, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (tasksData.data.success) {
-        setUpcomingTasks(tasksData.data.data);
-        setShowToast(true);
-        setToastMessage({ type: 'success', text: 'Task updated successfully!' });
+      if (response.data.success) {
+        setUpcomingTasks(prev => [...prev, response.data.task]);
+        setIsAddTaskModalOpen(false);
+        setTaskForm({
+          title: '',
+          deadline: '',
+          type: 'dsa',
+          priority: 'medium',
+          subtasks: []
+        });
       }
     } catch (error) {
-      console.error('Error updating subtask:', error);
-      setShowToast(true);
-      setToastMessage({ type: 'error', text: 'Failed to update task. Please try again.' });
+      console.error('Error adding task:', error);
+    }
+  };
+
+  const handleUpdateTask = async (taskId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`/api/dashboard/tasks/${taskId}`, taskForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setUpcomingTasks(prev => 
+          prev.map(task => task._id === taskId ? response.data.task : task)
+        );
+        setEditingTask(null);
+        setTaskForm({
+          title: '',
+          deadline: '',
+          type: 'dsa',
+          priority: 'medium',
+          subtasks: []
+        });
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.delete(`/api/dashboard/tasks/${taskId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setUpcomingTasks(prev => prev.filter(task => task._id !== taskId));
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
+  };
+
+  const handleToggleSubtask = async (taskId, subtaskId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`/api/dashboard/tasks/${taskId}/subtasks/${subtaskId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setUpcomingTasks(prev => 
+          prev.map(task => task._id === taskId ? response.data.task : task)
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling subtask:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUpcomingTasks();
+  }, []);
+
+  const handleAddTaskModalOpen = () => {
+    setIsAddTaskModalOpen(true);
+  };
+
+  const handleAddTaskModalClose = () => {
+    setIsAddTaskModalOpen(false);
+    setEditingTask(null);
+    setTaskForm({
+      title: '',
+      deadline: '',
+      type: 'dsa',
+      priority: 'medium',
+      subtasks: []
+    });
+  };
+
+  const handleEditTask = (task) => {
+    setEditingTask(task);
+    setTaskForm({
+      title: task.title,
+      deadline: task.deadline,
+      type: task.type,
+      priority: task.priority,
+      subtasks: task.subtasks
+    });
+  };
+
+  const handleTaskFormChange = (field, value) => {
+    setTaskForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleTaskFormSubmit = async (event) => {
+    event.preventDefault();
+    if (editingTask) {
+      await handleUpdateTask(editingTask._id);
+    } else {
+      await handleAddTask();
     }
   };
 
@@ -570,248 +648,173 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Achievements Section */}
-        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
-          <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>
-            Recent Achievements
-          </h3>
-          {sectionErrors.achievements && <ErrorMessage message="Error fetching achievements" />}
-          <div className="space-y-4">
-            {achievements.map((achievement, index) => (
-              <div key={index} className={`flex items-center space-x-4 p-4 ${
-                isDarkMode ? 'bg-gray-700' : 'bg-gray-50'
-              } rounded-lg`}>
-                <div className="flex-shrink-0">
-                  <TrophyIcon className="w-8 h-8 text-yellow-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} truncate`}>
-                    {achievement.title}
-                  </p>
-                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {achievement.description}
-                  </p>
-                </div>
-                <div className="inline-flex items-center text-sm font-semibold text-emerald-500">
-                  +{achievement.points} points
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Progress Section */}
-        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
-          <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>
-            Learning Progress
-          </h3>
-          {sectionErrors.progress && <ErrorMessage message="Error fetching learning progress" />}
-          <div className="space-y-6">
-            <div>
-              <h4 className={`text-md font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>DSA Progress</h4>
-              <div className="space-y-2">
-                {learningProgress.dsa.categories.map((category, index) => (
-                  <div key={index}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>{category.name}</span>
-                      <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>{category.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{ width: `${category.progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h4 className={`text-md font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>DevOps Progress</h4>
-              <div className="space-y-2">
-                {learningProgress.devops.categories.map((category, index) => (
-                  <div key={index}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>{category.name}</span>
-                      <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>{category.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-emerald-600 h-2 rounded-full"
-                        style={{ width: `${category.progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg rounded-lg overflow-hidden`}>
-          <div className="p-6">
-            <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>
-              Recent Activity
-            </h2>
-            {sectionErrors.activity && <ErrorMessage message="Error fetching recent activity" />}
-            <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div
-                  key={index}
-                  className={`flex items-start space-x-4 p-4 ${
-                    isDarkMode ? 'bg-gray-700' : 'bg-gray-50'
-                  } rounded-lg`}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {activity.title}
-                      </h3>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getDifficultyColor(activity.difficulty)}`}>
-                        {activity.difficulty}
-                      </span>
-                    </div>
-                    <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {activity.description}
-                    </p>
-                    <p className={`mt-2 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-700'}`}>
-                      {new Date(activity.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
         {/* Upcoming Tasks */}
         <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg rounded-lg overflow-hidden`}>
           <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex justify-between items-center mb-4">
               <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                 Upcoming Tasks
               </h2>
               <button
-                className={`px-4 py-2 ${isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white'} rounded-lg hover:bg-indigo-700`}
-                onClick={() => setShowModal(true)}
+                onClick={handleAddTaskModalOpen}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Add Task
               </button>
             </div>
-            {sectionErrors.tasks && <ErrorMessage message="Error fetching upcoming tasks" />}
+            
             <div className="space-y-4">
-              {upcomingTasks.map((task, index) => (
-                <div key={index} className="border-b border-gray-600 pb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {task.title}
-                    </span>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)}`}>
-                      {task.priority}
-                    </span>
+              {upcomingTasks.map((task) => (
+                <div
+                  key={task._id}
+                  className={`p-4 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {task.title}
+                      </h3>
+                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Due: {new Date(task.deadline).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEditTask(task)}
+                        className="p-1 text-blue-600 hover:text-blue-800"
+                      >
+                        <PencilIcon className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTask(task._id)}
+                        className="p-1 text-red-600 hover:text-red-800"
+                      >
+                        <TrashIcon className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
-                  <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
-                    Deadline: {new Date(task.deadline).toLocaleDateString()}
-                  </div>
-                  <div className="space-y-2">
-                    {task.subtasks.map((subtask, idx) => (
-                      <div key={idx} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={subtask.completed}
-                          onChange={() => handleToggleSubtask(task._id, subtask._id, !subtask.completed)}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className={subtask.completed ? 'line-through text-gray-500' : `${isDarkMode ? 'text-gray-400' : 'text-gray-700'}`}>
-                          {subtask.name}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+
+                  {task.subtasks && task.subtasks.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      {task.subtasks.map((subtask) => (
+                        <div
+                          key={subtask._id}
+                          className="flex items-center space-x-2"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={subtask.completed}
+                            onChange={() => handleToggleSubtask(task._id, subtask._id)}
+                            className="rounded text-blue-600"
+                          />
+                          <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {subtask.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Add Task Modal */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg max-w-md w-full p-6`}>
+        {/* Add/Edit Task Modal */}
+        {(isAddTaskModalOpen || editingTask) && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg w-96`}>
               <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>
-                Add New Task
+                {editingTask ? 'Edit Task' : 'Add New Task'}
               </h3>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                handleAddTask({
-                  title: formData.get('title'),
-                  type: formData.get('type'),
-                  priority: formData.get('priority'),
-                  deadline: formData.get('deadline'),
-                  subtasks: formData.get('subtasks').split('\n').filter(Boolean).map(name => ({ name }))
-                });
-              }}>
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    name="title"
-                    placeholder="Task Title"
-                    required
-                    className={`w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
-                  />
-                  <select
-                    name="type"
-                    required
-                    className={`w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
+              
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Task Title"
+                  value={taskForm.title}
+                  onChange={(e) => handleTaskFormChange('title', e.target.value)}
+                  className="w-full p-2 border rounded"
+                />
+                
+                <input
+                  type="date"
+                  value={taskForm.deadline}
+                  onChange={(e) => handleTaskFormChange('deadline', e.target.value)}
+                  className="w-full p-2 border rounded"
+                />
+                
+                <select
+                  value={taskForm.type}
+                  onChange={(e) => handleTaskFormChange('type', e.target.value)}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="dsa">DSA</option>
+                  <option value="system_design">System Design</option>
+                  <option value="devops">DevOps</option>
+                </select>
+                
+                <select
+                  value={taskForm.priority}
+                  onChange={(e) => handleTaskFormChange('priority', e.target.value)}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+
+                <div>
+                  <h4 className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
+                    Subtasks
+                  </h4>
+                  {taskForm.subtasks.map((subtask, index) => (
+                    <div key={index} className="flex items-center space-x-2 mb-2">
+                      <input
+                        type="text"
+                        value={subtask.name}
+                        onChange={(e) => {
+                          const newSubtasks = [...taskForm.subtasks];
+                          newSubtasks[index].name = e.target.value;
+                          handleTaskFormChange('subtasks', newSubtasks);
+                        }}
+                        className="flex-1 p-2 border rounded"
+                      />
+                      <button
+                        onClick={() => {
+                          handleTaskFormChange('subtasks', taskForm.subtasks.filter((_, i) => i !== index));
+                        }}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <TrashIcon className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => {
+                      handleTaskFormChange('subtasks', [...taskForm.subtasks, { name: '', completed: false }]);
+                    }}
+                    className="text-blue-600 hover:text-blue-800 text-sm"
                   >
-                    <option value="">Select Type</option>
-                    <option value="DSA">DSA</option>
-                    <option value="System Design">System Design</option>
-                    <option value="DevOps">DevOps</option>
-                    <option value="Learning">Learning</option>
-                  </select>
-                  <select
-                    name="priority"
-                    required
-                    className={`w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
-                  >
-                    <option value="">Select Priority</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
-                  <input
-                    type="date"
-                    name="deadline"
-                    required
-                    className={`w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
-                  />
-                  <textarea
-                    name="subtasks"
-                    placeholder="Enter subtasks (one per line)"
-                    required
-                    rows="4"
-                    className={`w-full px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
-                  ></textarea>
-                  <div className="flex justify-end space-x-3">
-                    <button
-                      type="button"
-                      className={`px-4 py-2 ${isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-700'} rounded-lg hover:bg-gray-600`}
-                      onClick={() => setShowModal(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className={`px-4 py-2 ${isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white'} rounded-lg hover:bg-indigo-700`}
-                    >
-                      Add Task
-                    </button>
-                  </div>
+                    + Add Subtask
+                  </button>
                 </div>
-              </form>
+              </div>
+
+              <div className="flex justify-end space-x-2 mt-6">
+                <button
+                  onClick={handleAddTaskModalClose}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleTaskFormSubmit}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  {editingTask ? 'Update' : 'Add'}
+                </button>
+              </div>
             </div>
           </div>
         )}
