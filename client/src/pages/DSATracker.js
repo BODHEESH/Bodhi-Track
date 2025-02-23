@@ -153,44 +153,44 @@ const DSATracker = () => {
   return (
     <div className={`min-h-screen p-6 ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className={`p-6 rounded-lg shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className={`p-4 sm:p-6 rounded-lg shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Total Problems</h3>
-            <span className="text-2xl font-bold">{stats.totalProblems}</span>
+            <h3 className="text-sm sm:text-lg font-semibold">Total Problems</h3>
+            <span className="text-xl sm:text-2xl font-bold">{stats.totalProblems}</span>
           </div>
         </div>
-        <div className={`p-6 rounded-lg shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div className={`p-4 sm:p-6 rounded-lg shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Completed</h3>
+            <h3 className="text-sm sm:text-lg font-semibold">Completed</h3>
             <div className="flex items-center">
-              <CheckCircleIcon className="w-6 h-6 text-green-500 mr-2" />
-              <span className="text-2xl font-bold text-green-500">{stats.completed}</span>
+              <CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 mr-2" />
+              <span className="text-xl sm:text-2xl font-bold text-green-500">{stats.completed}</span>
             </div>
           </div>
         </div>
-        <div className={`p-6 rounded-lg shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div className={`p-4 sm:p-6 rounded-lg shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">In Progress</h3>
+            <h3 className="text-sm sm:text-lg font-semibold">In Progress</h3>
             <div className="flex items-center">
-              <ClockIcon className="w-6 h-6 text-yellow-500 mr-2" />
-              <span className="text-2xl font-bold text-yellow-500">{stats.inProgress}</span>
+              <ClockIcon className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 mr-2" />
+              <span className="text-xl sm:text-2xl font-bold text-yellow-500">{stats.inProgress}</span>
             </div>
           </div>
         </div>
-        <div className={`p-6 rounded-lg shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div className={`p-4 sm:p-6 rounded-lg shadow-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Todo</h3>
+            <h3 className="text-sm sm:text-lg font-semibold">Todo</h3>
             <div className="flex items-center">
-              <XCircleIcon className="w-6 h-6 text-gray-500 mr-2" />
-              <span className="text-2xl font-bold text-gray-500">{stats.totalProblems - stats.completed - stats.inProgress}</span>
+              <XCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 mr-2" />
+              <span className="text-xl sm:text-2xl font-bold text-gray-500">{stats.totalProblems - stats.completed - stats.inProgress}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Search and Filter */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1">
           <input
             type="text"
@@ -204,127 +204,71 @@ const DSATracker = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
-          <button
-            className={`px-4 py-2 rounded-lg ${
-              filter === 'all'
-                ? 'bg-blue-500 text-white'
-                : isDarkMode
-                ? 'bg-gray-800 text-gray-300'
-                : 'bg-white text-gray-700'
-            }`}
-            onClick={() => setFilter('all')}
+        <div className="w-full sm:w-48">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className={`w-full px-4 py-2 rounded-lg ${
+              isDarkMode
+                ? 'bg-gray-800 text-gray-100'
+                : 'bg-white text-gray-900'
+            } border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500`}
           >
-            All
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg ${
-              filter === 'completed'
-                ? 'bg-green-500 text-white'
-                : isDarkMode
-                ? 'bg-gray-800 text-gray-300'
-                : 'bg-white text-gray-700'
-            }`}
-            onClick={() => setFilter('completed')}
-          >
-            Completed
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg ${
-              filter === 'in-progress'
-                ? 'bg-yellow-500 text-white'
-                : isDarkMode
-                ? 'bg-gray-800 text-gray-300'
-                : 'bg-white text-gray-700'
-            }`}
-            onClick={() => setFilter('in-progress')}
-          >
-            In Progress
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg ${
-              filter === 'todo'
-                ? 'bg-gray-500 text-white'
-                : isDarkMode
-                ? 'bg-gray-800 text-gray-300'
-                : 'bg-white text-gray-700'
-            }`}
-            onClick={() => setFilter('todo')}
-          >
-            Todo
-          </button>
+            <option value="all">All Problems</option>
+            <option value="completed">Completed</option>
+            <option value="in-progress">In Progress</option>
+            <option value="todo">Todo</option>
+          </select>
         </div>
       </div>
 
       {/* Problems Table */}
-      <div className={`bg-white rounded-lg shadow overflow-hidden ${isDarkMode ? 'bg-gray-800' : ''}`}>
+      <div className={`-mx-4 sm:mx-0 overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className={isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}>
               <tr>
-                <th className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                  Day
-                </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                  Problem
-                </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                  Difficulty
-                </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                  Status
-                </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                  Actions
-                </th>
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day</th>
+                <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Problem</th>
+                <th scope="col" className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
+                <th scope="col" className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Difficulty</th>
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
-            <tbody className={`divide-y divide-gray-200 dark:divide-gray-700 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {filteredProblems.map((problem) => (
                 <tr key={problem._id} className={isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
-                    <div className={`text-sm text-gray-900 ${isDarkMode ? 'text-gray-200' : ''}`}>Day {problem.day}</div>
-                  </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
-                    <div className="flex items-center">
-                      <div>
-                        <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
-                          {problem.title}
-                        </div>
-                        {problem.link && (
-                          <a
-                            href={problem.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-500 hover:text-blue-600"
-                          >
-                            View Problem
-                          </a>
-                        )}
-                      </div>
+                  <td className="px-3 sm:px-6 py-4">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Day {problem.day}</div>
+                    <div className="sm:hidden mt-1 text-xs text-gray-500">
+                      {problem.title} • {problem.topic}
                     </div>
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getDifficultyColor(problem.difficulty)}`}>
+                  <td className="hidden sm:table-cell px-6 py-4">
+                    <a
+                      href={problem.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      {problem.title}
+                    </a>
+                  </td>
+                  <td className="hidden md:table-cell px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {problem.topic}
+                  </td>
+                  <td className="hidden lg:table-cell px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDifficultyColor(problem.difficulty)}`}>
                       {problem.difficulty}
                     </span>
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(problem.status)}`}>
-                      {problem.status}
-                    </span>
-                  </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                  <td className="px-3 sm:px-6 py-4">
                     <select
                       value={problem.status}
                       onChange={(e) => updateProblemStatus(problem._id, e.target.value)}
-                      className={`px-3 py-1 rounded-lg text-sm ${
-                        isDarkMode
-                          ? 'bg-gray-700 text-gray-200'
-                          : 'bg-gray-100 text-gray-800'
-                      } border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      className={`text-sm rounded-full px-3 py-1 font-medium ${getStatusColor(problem.status)}`}
                     >
-                      <option value="todo">Todo</option>
+                      <option value="todo">To Do</option>
                       <option value="in-progress">In Progress</option>
                       <option value="completed">Completed</option>
                     </select>
@@ -336,20 +280,14 @@ const DSATracker = () => {
         </div>
       </div>
 
-      {/* Toast Message */}
+      {/* Toast Notification */}
       {showToast && (
-        <div className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg ${
-          toastMessage.type === 'error'
-            ? 'bg-red-500'
-            : 'bg-green-500'
-        } text-white`}>
+        <div className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg ${
+          toastMessage.type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+        }`}>
           {toastMessage.text}
-          <button
-            className="ml-4 text-white hover:text-gray-200"
-            onClick={() => setShowToast(false)}
-          >
-            ×
-          </button>
         </div>
       )}
     </div>

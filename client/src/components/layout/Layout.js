@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   HomeIcon,
@@ -12,11 +12,14 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   SunIcon,
-  MoonIcon
+  MoonIcon,
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../../context/ThemeContext';
 
 const Layout = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { isDarkMode, toggleTheme } = useTheme();
@@ -26,7 +29,7 @@ const Layout = () => {
     { name: 'DSA', href: '/dsa', icon: CodeBracketIcon },
     { name: 'System Design', href: '/system-design', icon: ServerIcon },
     { name: 'DevOps', href: '/devops', icon: CommandLineIcon },
-    { name: 'Projects', href: '/projects', icon: FolderIcon },
+    // { name: 'Projects', href: '/projects', icon: FolderIcon },
     { name: 'Planning', href: '/planning', icon: CalendarIcon },
     { name: 'Resources', href: '/resources', icon: BookOpenIcon },
     { name: 'Community', href: '/community', icon: UserGroupIcon },
@@ -38,10 +41,44 @@ const Layout = () => {
     navigate('/login');
   };
 
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
+
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Mobile Sidebar Toggle Button */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className={`p-2 rounded-lg shadow-lg ${
+            isDarkMode 
+              ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' 
+              : 'bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          {isSidebarOpen ? (
+            <XMarkIcon className="h-6 w-6" />
+          ) : (
+            <Bars3Icon className="h-6 w-6" />
+          )}
+        </button>
+      </div>
+
+      {/* Sidebar Overlay */}
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-300 lg:hidden ${
+          isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={closeSidebar}
+      />
+
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 w-64 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+      <div
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out lg:transform-none ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        } ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}
+      >
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className={`flex items-center justify-center h-16 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} border-b`}>
@@ -49,13 +86,14 @@ const Layout = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-2 py-4 space-y-1">
+          <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <Link
                   key={item.name}
                   to={item.href}
+                  onClick={closeSidebar}
                   className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                     isActive
                       ? 'bg-indigo-50 text-indigo-600'
@@ -117,8 +155,8 @@ const Layout = () => {
       </div>
 
       {/* Main content */}
-      <div className="pl-64">
-        <main className="py-6">
+      <div className="lg:pl-64 transition-padding duration-300">
+        <main className="py-6 px-4 sm:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>
