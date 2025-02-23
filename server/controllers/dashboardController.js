@@ -61,18 +61,67 @@ exports.getDashboardData = async (req, res) => {
 
 // Get dashboard stats
 exports.getStats = async (req, res) => {
-  console.log("get status started---------------------")
+  // console.log("get status started---------------------")
   try {
     const userId = req.user.id;
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     console.log("user id and one week ago", userId, oneWeekAgo)
 
+    console.log('Fetching DSA statistics...');
+    const problems = await DSAProblem.find();
+    
+    const dsaStatsData = {
+      totalProblems: 0,
+      completed: 0,
+      inProgress: 0,
+      todo: 0,
+      byDifficulty: {
+        easy: { total: 0, completed: 0 },
+        medium: { total: 0, completed: 0 },
+        hard: { total: 0, completed: 0 }
+      }
+    };
+
+    // console.log("dsa stats data", dsaStatsData)
+
+     // Calculate stats from nested problems
+     problems.forEach(day => {
+      if (day.problems && Array.isArray(day.problems)) {
+        day.problems.forEach(problem => {
+          dsaStatsData.totalProblems++;
+          
+          // Update difficulty stats
+          const difficulty = problem.difficulty.toLowerCase();
+          if (dsaStatsData.byDifficulty[difficulty]) {
+            dsaStatsData.byDifficulty[difficulty].total++;
+          }
+          
+          // Update status stats
+          switch (problem.status) {
+            case 'completed':
+              dsaStatsData.completed++;
+              if (dsaStatsData.byDifficulty[difficulty]) {
+                dsaStatsData.byDifficulty[difficulty].completed++;
+              }
+              break;
+            case 'in-progress':
+              dsaStatsData.inProgress++;
+              break;
+            default:
+              dsaStatsData.todo++;
+          }
+        });
+      }
+    });
+
+    // console.log('DSA statistics:', dsaStatsData);
+
     // Get user data with targets
     const userData = await User.findById(userId)
       .select('targets learningHours')
       .lean();
-    console.log("user data", userData)
+    // console.log("user data", userData)
 
     if (!userData) {
       return res.status(404).json({
@@ -81,97 +130,134 @@ exports.getStats = async (req, res) => {
       });
     }
 
-    // Get DSA stats
+    // Get DSA stats with difficulty breakdown
     const dsaStats = await DSAProblem.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+      // First unwind the problems array to work with individual problems
+      { $unwind: "$problems" },
       {
         $facet: {
           'total': [
             { $count: 'count' }
           ],
           'completed': [
-            { $match: { status: 'completed' } },
+            { $match: { "problems.status": "completed" } },
+            { $count: 'count' }
+          ],
+          'inProgress': [
+            { $match: { "problems.status": "in-progress" } },
             { $count: 'count' }
           ],
           'weeklyProgress': [
             {
               $match: {
-                status: 'completed',
+                "problems.status": "completed",
                 updatedAt: { $gte: oneWeekAgo }
               }
             },
             { $count: 'count' }
-          ]
-        }
-      }
-    ]);
-
-    console.log("dsa stats-----------------------", dsaStats)
-
-    // Get System Design stats
-    const systemDesignStats = await SystemDesign.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
-      {
-        $facet: {
-          'total': [
-            { $count: 'count' }
           ],
-          'completed': [
-            { $match: { status: 'completed' } },
-            { $count: 'count' }
-          ],
-          'weeklyProgress': [
+          'byDifficulty': [
             {
-              $match: {
-                status: 'completed',
-                updatedAt: { $gte: oneWeekAgo }
+              $group: {
+                _id: "$problems.difficulty",
+                total: { $sum: 1 },
+                completed: {
+                  $sum: {
+                    $cond: [{ $eq: ["$problems.status", "completed"] }, 1, 0]
+                  }
+                }
               }
-            },
-            { $count: 'count' }
+            }
           ]
         }
       }
     ]);
 
-    // Get DevOps stats
-    const devOpsStats = await DevOps.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
-      {
-        $facet: {
-          'total': [
-            { $count: 'count' }
-          ],
-          'completed': [
-            { $match: { status: 'completed' } },
-            { $count: 'count' }
-          ],
-          'weeklyProgress': [
-            {
-              $match: {
-                status: 'completed',
-                updatedAt: { $gte: oneWeekAgo }
-              }
-            },
-            { $count: 'count' }
-          ]
-        }
-      }
-    ]);
+    // console.log("Raw DSA Stats:", JSON.stringify(dsaStats, null, 2));
 
-    // Helper function to extract counts from aggregation results
+    // Helper function to extract counts from aggregation results with proper defaults
     const extractCounts = (stats) => {
       const result = stats[0] || {};
       return {
         total: (result.total && result.total[0] && result.total[0].count) || 0,
         completed: (result.completed && result.completed[0] && result.completed[0].count) || 0,
+        inProgress: (result.inProgress && result.inProgress[0] && result.inProgress[0].count) || 0,
         weeklyProgress: (result.weeklyProgress && result.weeklyProgress[0] && result.weeklyProgress[0].count) || 0
       };
     };
 
     // Extract all stats
     const dsa = extractCounts(dsaStats);
-    const systemDesign = extractCounts(systemDesignStats);
-    const devOps = extractCounts(devOpsStats);
+    
+    // Get DevOps stats
+    const devOpsDoc = await DevOps.findOne();
+    const devOps = {
+      total: 0,
+      completed: 0,
+      inProgress: 0,
+      weeklyProgress: 0,
+      todo: 0
+    };
+
+    if (devOpsDoc && devOpsDoc.topics) {
+      devOps.total = devOpsDoc.topics.length;
+      devOps.completed = devOpsDoc.topics.filter(t => t.status === 'completed').length;
+      devOps.inProgress = devOpsDoc.topics.filter(t => t.status === 'in-progress').length;
+      devOps.todo = devOps.total - (devOps.completed + devOps.inProgress);
+      devOps.weeklyProgress = devOpsDoc.topics.filter(t => 
+        t.status === 'completed' && 
+        new Date(devOpsDoc.updatedAt) >= oneWeekAgo
+      ).length;
+    }
+
+    console.log("DevOps Document:", devOpsDoc);
+    console.log("DevOps Stats:", JSON.stringify(devOps, null, 2));
+
+    // Get system design stats
+    const systemDesignDoc = await SystemDesign.findOne();
+    // console.log("system design doc ", systemDesignDoc)
+    const systemDesign = {
+      total: 0,
+      completed: 0,
+      inProgress: 0,
+      weeklyProgress: 0,
+      todo: 0
+    };
+
+    if (systemDesignDoc && systemDesignDoc.topics) {
+      systemDesign.total = systemDesignDoc.topics.length;
+      systemDesign.completed = systemDesignDoc.topics.filter(t => t.status === 'completed').length;
+      systemDesign.inProgress = systemDesignDoc.topics.filter(t => t.status === 'in-progress').length;
+      systemDesign.todo = systemDesign.total - (systemDesign.completed + systemDesign.inProgress);
+      systemDesign.weeklyProgress = systemDesignDoc.topics.filter(t => 
+        t.status === 'completed' && 
+        new Date(systemDesignDoc.updatedAt) >= oneWeekAgo
+      ).length;
+    }
+
+    // console.log('System Design Document:', systemDesignDoc);
+    // console.log('System Design Stats:', systemDesign);
+
+    // Process DSA difficulty stats
+    const difficultyStats = {};
+    if (dsaStats[0] && dsaStats[0].byDifficulty) {
+      dsaStats[0].byDifficulty.forEach(stat => {
+        if (stat._id) {
+          difficultyStats[stat._id.toLowerCase()] = {
+            total: stat.total || 0,
+            completed: stat.completed || 0
+          };
+        }
+      });
+    }
+
+    // Ensure all difficulty levels exist with default values
+    const defaultDifficulties = ['easy', 'medium', 'hard'];
+    defaultDifficulties.forEach(diff => {
+      if (!difficultyStats[diff]) {
+        difficultyStats[diff] = { total: 0, completed: 0 };
+      }
+    });
 
     // Calculate learning hours (implement based on your tracking mechanism)
     const learningHours = {
@@ -180,32 +266,45 @@ exports.getStats = async (req, res) => {
       weeklyProgress: userData.learningHours?.weeklyProgress || 0
     };
 
-    // Prepare response
+    // Prepare response with formatted values
     const stats = {
       dsaProblems: {
         ...dsa,
-        weeklyTarget: userData.targets?.dsa.weekly || 8
+        todo: Math.max(0, dsa.total - (dsa.completed + dsa.inProgress)),
+        byDifficulty: difficultyStats,
+        weeklyTarget: userData.targets?.dsa?.weekly || 8,
+        value: `${dsa.completed}/${dsa.total}`,
+        change: `+${dsa.weeklyProgress} this week`
       },
       systemDesign: {
         ...systemDesign,
-        weeklyTarget: userData.targets?.systemDesign.weekly || 2
+        weeklyTarget: userData.targets?.systemDesign?.weekly || 2,
+        value: `${systemDesign.completed}/${systemDesign.total}`,
+        change: `+${systemDesign.weeklyProgress} this week`
       },
       devopsTasks: {
         ...devOps,
-        weeklyTarget: userData.targets?.devops.weekly || 5
+        todo: Math.max(0, devOps.total - (devOps.completed + devOps.inProgress)),
+        weeklyTarget: userData.targets?.devops?.weekly || 5,
+        value: `${devOps.completed}/${devOps.total}`,
+        change: `+${devOps.weeklyProgress} this week`
       },
       learningHours: {
         ...learningHours,
-        weeklyTarget: userData.targets?.learningHours.weekly || 8
+        weeklyTarget: userData.targets?.learningHours?.weekly || 8,
+        value: `${learningHours.completed}/${learningHours.total}`,
+        change: `+${learningHours.weeklyProgress} this week`
       }
     };
+// console.log("final status for checking,::", stats);
+    console.log("Final stats:", JSON.stringify(stats, null, 2));
 
-    // console.log("Final stats:", stats);
-
-    res.json({
-      success: true,
-      data: stats
-    });
+    if (!res.headersSent) {
+      res.json({
+        success: true,
+        data: stats
+      });
+    }
 
   } catch (error) {
     console.error('Error getting dashboard stats:', error);

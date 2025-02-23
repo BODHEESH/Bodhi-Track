@@ -57,10 +57,45 @@ const Dashboard = () => {
   const [showToast, setShowToast] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [stats, setStats] = useState({
-    dsaProblems: { value: '0/0', change: '+0 this week', total: 0, completed: 0, pending: 0, weeklyTarget: 8 },
-    systemDesign: { value: '0/0', change: '+0 this week', total: 0, completed: 0, pending: 0, weeklyTarget: 2 },
-    devopsTasks: { value: '0/0', change: '+0 this week', total: 0, completed: 0, pending: 0, weeklyTarget: 5 },
-    learningHours: { value: '0/0', change: '+0 this week', total: 0, completed: 0, pending: 0, weeklyTarget: 8 }
+    dsaProblems: { 
+      value: '0/0', 
+      change: '+0 this week', 
+      total: 0, 
+      completed: 0, 
+      inProgress: 0,
+      todo: 0,
+      weeklyTarget: 8,
+      byDifficulty: {
+        easy: { total: 0, completed: 0 },
+        medium: { total: 0, completed: 0 },
+        hard: { total: 0, completed: 0 }
+      }
+    },
+    systemDesign: { 
+      value: '0/0', 
+      change: '+0 this week', 
+      total: 0, 
+      completed: 0, 
+      inProgress: 0,
+      todo: 0,
+      weeklyTarget: 2 
+    },
+    devopsTasks: { 
+      value: '0/0', 
+      change: '+0 this week', 
+      total: 0, 
+      completed: 0, 
+      inProgress: 0,
+      todo: 0,
+      weeklyTarget: 5 
+    },
+    learningHours: { 
+      value: '0/0', 
+      change: '+0 this week', 
+      total: 0, 
+      completed: 0, 
+      weeklyTarget: 8 
+    }
   });
   const [achievements, setAchievements] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
@@ -109,15 +144,47 @@ const Dashboard = () => {
     const statsData = await fetchData('http://localhost:5000/api/dashboard/stats', 'stats');
     console.log("statsData ,,, ", statsData)
     if (statsData) {
-      const newStats = {};
-      Object.keys(statsData).forEach(key => {
-        const stat = statsData[key];
-        newStats[key] = {
-          ...stat,
-          value: `${stat.completed}/${stat.total}`,
-          change: `+${stat.weeklyProgress} this week`
-        };
-      });
+      const newStats = {
+        dsaProblems: {
+          value: `${statsData.dsaProblems.completed}/${statsData.dsaProblems.total}`,
+          change: `+${statsData.dsaProblems.weeklyProgress} this week`,
+          total: statsData.dsaProblems.total || 0,
+          completed: statsData.dsaProblems.completed || 0,
+          inProgress: statsData.dsaProblems.inProgress || 0,
+          todo: statsData.dsaProblems.todo || 0,
+          weeklyTarget: statsData.dsaProblems.weeklyTarget || 8,
+          byDifficulty: statsData.dsaProblems.byDifficulty || {
+            easy: { total: 0, completed: 0 },
+            medium: { total: 0, completed: 0 },
+            hard: { total: 0, completed: 0 }
+          }
+        },
+        systemDesign: {
+          value: `${statsData.systemDesign.completed}/${statsData.systemDesign.total}`,
+          change: `+${statsData.systemDesign.weeklyProgress} this week`,
+          total: statsData.systemDesign.total || 0,
+          completed: statsData.systemDesign.completed || 0,
+          inProgress: statsData.systemDesign.inProgress || 0,
+          todo: statsData.systemDesign.todo || 0,
+          weeklyTarget: statsData.systemDesign.weeklyTarget || 2
+        },
+        devopsTasks: {
+          value: `${statsData.devopsTasks.completed}/${statsData.devopsTasks.total}`,
+          change: `+${statsData.devopsTasks.weeklyProgress} this week`,
+          total: statsData.devopsTasks.total || 0,
+          completed: statsData.devopsTasks.completed || 0,
+          inProgress: statsData.devopsTasks.inProgress || 0,
+          todo: statsData.devopsTasks.todo || 0,
+          weeklyTarget: statsData.devopsTasks.weeklyTarget || 5
+        },
+        learningHours: {
+          value: `${statsData.learningHours.completed}/${statsData.learningHours.total}`,
+          change: `+${statsData.learningHours.weeklyProgress} this week`,
+          total: statsData.learningHours.total || 0,
+          completed: statsData.learningHours.completed || 0,
+          weeklyTarget: statsData.learningHours.weeklyTarget || 8
+        }
+      };
 
       console.log("newStats ,,, ", newStats)
       setStats(newStats);
@@ -234,7 +301,8 @@ const Dashboard = () => {
       icon: <BoltIcon className="w-8 h-8" />, 
       change: stats.dsaProblems.change,
       completed: stats.dsaProblems.completed,
-      total: stats.dsaProblems.total,
+      total: 191,
+      // total: stats.dsaProblems.total,
       pending: stats.dsaProblems.pending,
       gradient: 'from-blue-500 to-indigo-600',
       ringColor: 'text-blue-500',
@@ -249,7 +317,8 @@ const Dashboard = () => {
       icon: <RocketLaunchIcon className="w-8 h-8" />, 
       change: stats.systemDesign.change,
       completed: stats.systemDesign.completed,
-      total: stats.systemDesign.total,
+      total: 35,
+      // total: stats.systemDesign.total,
       pending: stats.systemDesign.pending,
       gradient: 'from-purple-500 to-pink-600',
       ringColor: 'text-purple-500',
@@ -263,7 +332,8 @@ const Dashboard = () => {
       icon: <ChartBarIcon className="w-8 h-8" />, 
       change: stats.devopsTasks.change,
       completed: stats.devopsTasks.completed,
-      total: stats.devopsTasks.total,
+      total: 30,
+      // total: stats.devopsTasks.total,
       pending: stats.devopsTasks.pending,
       gradient: 'from-emerald-500 to-teal-600',
       ringColor: 'text-emerald-500',
@@ -285,9 +355,13 @@ const Dashboard = () => {
     }
   ];
 
+  const DifficultyStats = ({ difficulty, stats = { total: 0, completed: 0 } }) => (
+    <div className="flex flex-col items-center p-2">
+      <div className="text-sm font-medium capitalize mb-1">{difficulty}</div>
+      <div className="text-lg font-bold">{stats.completed}/{stats.total}</div>
+    </div>
+  );
 
-
-  
   const getStatKey = (name) => {
     return name.toLowerCase().replace(/\s+/g, '');
   };
@@ -335,65 +409,166 @@ const Dashboard = () => {
           Dashboard Overview
         </h2>
 
-{/* Stats Grid */}
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-  {statsConfig.map((item, index) => (
-    <div
-      key={index}
-      className={`relative overflow-hidden rounded-2xl ${
-        isDarkMode ? 'bg-gray-800' : 'bg-white'
-      } p-4 transition-all duration-300 hover:scale-105 hover:shadow-lg`}
-    >
-      {/* Background gradient effect */}
-      <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${item.gradient}`}></div>
-      
-      <div className="relative z-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className={`p-2 rounded-lg bg-gradient-to-br ${item.iconGradient}`}>
-            {item.icon}
-          </div>
-          <h3 className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            {item.name}
-          </h3>
-        </div>
-
-        {/* Progress and Stats */}
-        <div className="flex items-center justify-between">
-          <div className={item.ringColor}>
-            <CircularProgress value={item.completed} total={item.total} size={50} strokeWidth={6} />
-          </div>
-          
-          <div className="ml-3">
-            <div className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>
-              {item.completed}
-              <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                /{item.total}
-              </span>
-            </div>
-            <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>
-              Weekly Target: <span className="font-semibold">{item.weeklyTarget}</span>
-            </div>
-            <div className="flex items-center">
-              <div className="text-xs font-medium text-emerald-400">
-                {item.change}
-              </div>
-              <div className={`ml-2 px-2 py-1 text-xs font-semibold rounded-full ${
-                isDarkMode 
-                  ? 'bg-gray-700 text-gray-300' 
-                  : 'bg-gray-200 text-gray-700'
-              }`}>
-                {item.pending} pending
+        {/* Main Stats Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Left Column - DSA Stats */}
+          <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-xl shadow-lg col-span-1`}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>DSA Problems</h3>
+              <div className={`px-3 py-1 rounded-full ${isDarkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-800'}`}>
+                {stats.dsaProblems.value}
               </div>
             </div>
+
+            <div className="flex justify-center mb-6">
+              <CircularProgress value={stats.dsaProblems.completed} total={stats.dsaProblems.total} />
+            </div>
+
+            <div className="mb-6">
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Weekly Progress</div>
+              <div className="flex items-center justify-between">
+                <span className={`text-lg font-semibold ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                  {stats.dsaProblems.change}
+                </span>
+                <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Target: {stats.dsaProblems.weeklyTarget}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              {Object.entries(stats.dsaProblems.byDifficulty).map(([difficulty, data]) => (
+                <div key={difficulty} className="text-center">
+                  <div className={`text-sm font-medium mb-1 capitalize ${
+                    difficulty === 'easy' ? 'text-green-500' :
+                    difficulty === 'medium' ? 'text-yellow-500' :
+                    'text-red-500'
+                  }`}>
+                    {difficulty}
+                  </div>
+                  <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {data.completed}/{data.total}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Todo</div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {stats.dsaProblems.todo}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>In Progress</div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {stats.dsaProblems.inProgress}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Completed</div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {stats.dsaProblems.completed}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle Column - System Design */}
+          <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-xl shadow-lg col-span-1`}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>System Design</h3>
+              <div className={`px-3 py-1 rounded-full ${isDarkMode ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-100 text-purple-800'}`}>
+                {stats.systemDesign.value}
+              </div>
+            </div>
+
+            <div className="flex justify-center mb-6">
+              <CircularProgress value={stats.systemDesign.completed} total={stats.systemDesign.total} />
+            </div>
+
+            <div className="mb-6">
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Weekly Progress</div>
+              <div className="flex items-center justify-between">
+                <span className={`text-lg font-semibold ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                  {stats.systemDesign.change}
+                </span>
+                <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Target: {stats.systemDesign.weeklyTarget}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Todo</div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {stats.systemDesign.todo}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>In Progress</div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {stats.systemDesign.inProgress}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Completed</div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {stats.systemDesign.completed}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - DevOps Tasks */}
+          <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-xl shadow-lg col-span-1`}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>DevOps Tasks</h3>
+              <div className={`px-3 py-1 rounded-full ${isDarkMode ? 'bg-emerald-900/30 text-emerald-400' : 'bg-emerald-100 text-emerald-800'}`}>
+                {stats.devopsTasks.value}
+              </div>
+            </div>
+
+            <div className="flex justify-center mb-6">
+              <CircularProgress value={stats.devopsTasks.completed} total={stats.devopsTasks.total} />
+            </div>
+
+            <div className="mb-6">
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Weekly Progress</div>
+              <div className="flex items-center justify-between">
+                <span className={`text-lg font-semibold ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                  {stats.devopsTasks.change}
+                </span>
+                <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Target: {stats.devopsTasks.weeklyTarget}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Todo</div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {stats.devopsTasks.todo}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>In Progress</div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {stats.devopsTasks.inProgress}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Completed</div>
+                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {stats.devopsTasks.completed}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      {sectionErrors.stats && <ErrorMessage message="Error fetching stats" />}
-    </div>
-  ))}
-</div>
-
 
         {/* Achievements Section */}
         <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>

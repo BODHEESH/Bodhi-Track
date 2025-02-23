@@ -25,6 +25,8 @@ const SystemDesignTracker = () => {
       });
       const fetchedSections = Array.isArray(response.data) ? response.data : [response.data];
       setSections(fetchedSections);
+
+      console.log('fetchedSections', fetchedSections);
       
       // Calculate stats
       const newStats = {

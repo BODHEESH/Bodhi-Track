@@ -121,6 +121,8 @@ exports.getStatistics = async (req, res) => {
       });
     });
 
+    console.log('System Design statistics:', stats);
+
     res.status(200).json({
       success: true,
       stats

@@ -23,6 +23,11 @@ const problemSchema = new mongoose.Schema({
 });
 
 const dsaProblemSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   day: {
     type: Number,
     required: true
